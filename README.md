@@ -1,14 +1,14 @@
-<center>
+<p align="center">
 <img src="./static/ROE.md-logo.png" width="48" height="48" alt="ROE.md Logo" title="ROE.md Logo"/>
-</center>
+</p>
 
-# ROE.md - Raise Your Personal OpenClaw-like Creature From a Single Markdown File 🧫 (alpha)
+# ROE.md - Raise Your Personal OpenClaw-like Creature From a Single Markdown File (alpha)
 
 **ROE.md** is a **single** Markdown **file** to molt (raise) your own customized _OpenClaw-like_ personal assistant into existence. **Zero external dependencies!**
 _Except for the power of AI (cough)_ 
 
 Now call your favorite AI assistant to raise your highly personalized **OpenClaw-like** creature.
-What will you raise? A Lobster 🦞, an Octopus 🐙 or something else?! 🐧 👾 🧞‍♀
+What will you raise? A Lobster 🦞, an Octopus 🐙 or something else?! 🐧 👾 🧞
 
 > [!CAUTION]
 > Please note that `ROE.md` is still still in alpha stage, expect bugs, an unstable API and security issues!
