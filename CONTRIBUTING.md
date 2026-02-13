@@ -1,8 +1,6 @@
 # Contributing to ROE.md
 
-Welcome to sponge! 
-
-Quick 
+Welcome to the sponge! 
 
 ## Maintainers 
 
