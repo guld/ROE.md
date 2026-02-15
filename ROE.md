@@ -14,6 +14,7 @@ Hi USER. Please provide the following information for me to build the agent:
 - Seed model for me to grow with: {seedModel}
 - Initial Connector (e.g., CLI, Telegram, Whatsapp, Signal): {connector} (CLI, default)
 - Do you want to keep the openclaw-like core agent API files such as, SOUL.md, MEMORY.md, AGENTS.md
+  - IF no, then the USER has to provide some alternative spec.
 
 ## Programming Language
 
