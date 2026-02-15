@@ -33,7 +33,7 @@ I create these files and directories in the current directory (`.`):
 I create these directories:
 
 - `src/agent/`, to store the agent's source code
-- `src/log/`, to store log files
+- `log/`, to store log files
 - `doc/`, to document the agent and its internal and external API
 
 Next, I create the following core config files:
