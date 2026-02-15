@@ -454,7 +454,7 @@ Notes:
 
 I focus on developing the following agent.
 
-- (executable) run_agent
+- (executable) roe_agent, I ask the user for a custom name.
   1. Core API 
      - add LM Studio, OpenAI and Anthropic model provider APIs
      - add a list of models such as `gpt-oss-20b`
