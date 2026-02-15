@@ -474,10 +474,28 @@ I focus on developing the following agent.
       - wait for USER input 
       - send a tool call response back to the assistant before returning to the USER
       - ON_ERROR show the error message and send it back to the assistant
-  6. Chat system commands
-     - add chat commands such as 
-       - `/connect` to different providers / models, 
-       - toggle `/debug` messages,
+  6. Chat interface system commands
+     - Command types 
+        - toggle command to swap state.
+        - list command to list options, features and so on.
+        - execute command to affect some state (CRUD) and return result.
+      - Core chat commands: 
+        - `/help` show available commands.
+        - `/stats` detailed token usage separated by providers, models, input tokens, output tokens, user messages, errors etc.
+        - `status` system status, are agent and deamon online, which APIs and connections are active, and is agent in build mode e.g., to detect hot-swapping issues.
+        - `/providers` list available model API providers, switch providers via tab-select
+        - `/models` list available models, switch models via tab-select
+        - `/connect` initiate provider+model connection, multi-step tab-select.
+        - `/skills` list available `skill/<skill-name>.md` files. 
+          - hardskills, tools, mcps and skills directly integrated as code
+        - `/cronjobs` list active cronjobs.
+      - Core chat toggle commands (show/hide): 
+        - `/debug` 
+        - `/showthinking`
+        - `/raw`
+      - Keyboard movements:
+        - tab and shift-tab for selecting
+        - linux terminal style movement commands e.g., press up,down to see chat history
   7. Message flow patterns
       - Core abbreviations
         - A: assistant
