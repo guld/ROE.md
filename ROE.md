@@ -463,19 +463,46 @@ I focus on developing the following agent.
      - testAPIConnected -> check if the model server responds with 200 ok
      - testToolCall -> use bash pwd to show current directory
   3. Main agent loop 
-  4. System message initialization
-     - Set core system messages and load config files `SOUL.md`, `MEMORY.md`, etc. 
-     - Greet the USER and wait for input.
-  5. Interactive loop
-     - add a non-streamed and stream: True variant
-     - Wait for USER input or tool call response and agent response
-     - IF type tool call response send it back to the model
-     - ELSE wait for USER input
-     - ON_ERROR show the error message and send it to the model
+    1. System message init
+      - On start of the agent event-loop check if the `BOOTSTRAP.md` exists.
+      - Set core system messages and load config files `SOUL.md`, `MEMORY.md`, etc. 
+      - Check for long running pending tasks.
+      - Greet the USER and wait for input.
+    2. Interactive loop
+      - use stream: True to connect to a provider API, provide non-streaming variant as a fallback
+      - use Websocket connection for streaming responses of the assistant and external connectors
+      - wait for USER input 
+      - send a tool call response back to the assistant before returning to the USER
+      - ON_ERROR show the error message and send it back to the assistant
   6. Chat system commands
      - add chat commands such as 
        - `/connect` to different providers / models, 
        - toggle `/debug` messages,
+  7. Message flow patterns
+      - Core abbreviations
+        - A: assistant
+        - S: system
+        - T: tool 
+        - U: USER
+      - UAU pattern: USER->assistant->USER
+        - Example: USER asks a simple question, assistant answers, waiting for next USER input.
+      - UATAU pattern: USER->assistant->tool->assistant(->tool->assistant)->USER
+        - USER asking the assistant for wheather tomorrow. Complex tasks may require multiple tool->assistant calls before returning back to the USER.
+      - SU / US pattern: SYSTEM->USER / USER->SYSTEM
+        - Example: USER logon when USER starts app, logoff USER says `bye`. 
+      - STAU pattern: EXTERNSYSTEM->tool->assistant-USER
+        - Example: cron command executes and passes result to main-loop-plugin results in flow: main-loop direct system call->execute_bash->assistant->USER. 
+      - STAU pattern: INTERNSYSTEM->tool->assistant-USER
+        - Example: `/cronjobs` chat command  results in flow: chat command->execute_bash->assistant->USER.
+        - Example: an internal error occurs and results in flow: yield errorOrDebugMessage->assistant->USER. 
+    - Note: 
+      1. patterns in parentheses are optional
+      2. multiple ATA patterns are allowed, but always return tool, error or debug messages back to the assistant first, before responding to the USER.
+      2. every step in the message flow is visible to the USER, including special tokens such as thinking tokens
+    - special token highlighting
+      - thinking tokens `<think>...</think> (or similar)` are distinctly formatted in the chat
+      - USER may toggle `/showthinking` via chat command
+
 
 - Follow the official API implementations, depending on the selected model e.g., OpenAI, Anthropic and lm-studio APIs.
 
