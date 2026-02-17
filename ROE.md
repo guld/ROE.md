@@ -536,10 +536,20 @@ I focus on developing the following agent.
       - thinking tokens `<think>...</think> (or similar)` are distinctly formatted in the chat
       - USER may toggle `/showthinking` via chat command
   8. Plugin system
-      - core plugin connector hot-swappable
-      - load plugins via custom `/<pluginname>` toggle and execute commands from `src/plugins/`
-      - Plugins may interact with the message flow in using the hooks / middleware or by providing custom tool calls.
-
+    - core plugin connector hot-swappable
+    - load plugins via custom `/<pluginname>` toggle and execute commands from `src/plugins/`
+    - Plugins may interact with the message flow in using the hooks / middleware or by providing custom tool calls.
+    - Initial plugins
+      - Telegram plugin:
+        - Create a telegram plugin in `src/plugins/` with full bot integration (start/help/status commands, message handling, async threading)
+        - `/telegram add <botname> <token>` connect using TELEGRAM_BOT_TOKEN and store it in RAM
+        - `/telegram remove <botname>` disconnect and cleanup
+        - `/telegram status` show connection state
+        - Modify `roe_agent` to auto-load plugin on startup and handle Telegram commands
+        - `/telegram` toggles connection and shows status
+        - Update `SKILLS.md` to document Telegram plugin usage
+        - Add tests for Telegram plugin
+        - make sure to read and display the message sender id and or username for every message send through telegram to differentiate users in a group chat
 
 
 - Follow the official API implementations, depending on the selected model e.g., OpenAI, Anthropic and lm-studio APIs.
