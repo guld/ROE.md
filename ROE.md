@@ -730,6 +730,10 @@ Next, I make sure streaming works
     [DONE]
 </test-example-lm-studio-stream-call>
 
+<test-example-thinking-tokens>
+[think:Need][think: another][think: joke][think:.]
+</test-example-thinking-tokens>
+
 I also make sure streaming works with tool calling
 
 <test-example-tool-call-stream>
