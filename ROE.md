@@ -474,6 +474,20 @@ I focus on developing the following agent.
       - wait for USER input 
       - send a tool call response back to the assistant before returning to the USER
       - ON_ERROR show the error message and send it back to the assistant
+  4. Gateway
+    - Core message gateway
+      - allows to filter all incomming and outgoing messages including tool calls
+      - include a hooks / middleware
+        - should count used IO tokens for `/stats` command by provider and model
+      - can be used to filter any IO messages to make them secure
+  5. Hot-swappable components
+    - core components
+      - deamon to allow for hot-swap and auto-restart of the main loop
+      - runtime with main loop
+      - logging via Markdown files
+        - store any messages in simple Markdown event-log files in `log/`.
+      - plugin system
+    - core components need to be hot-swappable during run-time such that the agent can update its own code while running, without the need for a restart
   6. Chat interface system commands
      - Command types 
         - toggle command to swap state.
@@ -489,6 +503,7 @@ I focus on developing the following agent.
         - `/skills` list available `skill/<skill-name>.md` files. 
           - hardskills, tools, mcps and skills directly integrated as code
         - `/cronjobs` list active cronjobs.
+        - unavailable commands should result in a `command does not exist` message
       - Core chat toggle commands (show/hide): 
         - `/debug` 
         - `/showthinking`
@@ -520,6 +535,11 @@ I focus on developing the following agent.
     - special token highlighting
       - thinking tokens `<think>...</think> (or similar)` are distinctly formatted in the chat
       - USER may toggle `/showthinking` via chat command
+  8. Plugin system
+      - core plugin connector hot-swappable
+      - load plugins via custom `/<pluginname>` toggle and execute commands from `src/plugins/`
+      - Plugins may interact with the message flow in using the hooks / middleware or by providing custom tool calls.
+
 
 
 - Follow the official API implementations, depending on the selected model e.g., OpenAI, Anthropic and lm-studio APIs.
