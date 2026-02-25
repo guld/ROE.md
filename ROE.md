@@ -15,6 +15,10 @@ Hi USER. Please provide the following information for me to build the agent:
 - Initial Connector (e.g., CLI, Telegram, Whatsapp, Signal): {connector} (CLI, default)
 - Do you want to keep the openclaw-like core agent API files such as, SOUL.md, MEMORY.md, AGENTS.md
   - IF no, then the USER has to provide some alternative spec.
+- Node configuration:
+  - Which devices should run the agent? {devices} (e.g., server, laptop, desktop, smartphone, IoT)
+  - Which device is the main node? {mainNode} (typically server)
+  - Device ownership: Is the agent just for you or your family, or team? If it is for multiple users, which user owns which device? {deviceOwnership} (optional). User may add new devices later on.
 
 ## Programming Language
 
@@ -26,6 +30,26 @@ I create the following tools.
 
 - execute_bash(cmd)
 
+### System Commands (Called via bash)
+
+The agent uses the `execute_bash` tool to execute system commands for node health, sensors, and other operations.
+
+<example-bash-commands>
+| Function | Linux | macOS | Windows | Other OS |
+|----------|-------|-------|---------|----------|
+| CPU info | `lscpu` | `sysctl -n hw.ncpu` | `wmic cpu get Name` | Use available command |
+| Memory | `free -m` | `vm_stat` | `systeminfo \| findstr Memory` | Use available command |
+| Battery | `upower -d` | `pmset -g batt` | `wmic battery` | Use available command |
+| Temperature | `sensors` | `osx-cpu-temp` | `wmic /namespace:\\root\wmi MSAcpi_ThermalZoneTemperature` | Use available command |
+| Disk | `df -h` | `df -h` | `wmic logicaldisk get size,freespace` | Use available command |
+| Sensors list | `ls /sys/class/hwmon/` | `system_profiler` | `wmic` | Use available command |
+| Location | `geoclue` | `Core Location` | `Windows Location API` | Use available command |
+</example-bash-commands>
+
+> **Note**: On different OSs, use the appropriate commands available on that system.
+> On platforms where bash is not available (iOS, Android) for now we assume a bash adapter or equivalent shell access exists.
+
+
 ## File Structure 
 
 I create these files and directories in the current directory (`.`):
@@ -33,6 +57,7 @@ I create these files and directories in the current directory (`.`):
 I create these directories:
 
 - `src/agent/`, to store the agent's source code
+- `src/plugins/`, to store plugin modules
 - `log/`, to store log files
 - `doc/`, to document the agent and its internal and external API
 
@@ -374,7 +399,8 @@ Things like:
 - Speaker/room names
 - Device nicknames
 - Anything environment-specific
-
+  - Local AI configuration (LM-Studio endpoint)
+  - Sensors configurations
 
 ## Examples
 
@@ -392,6 +418,12 @@ Things like:
 
 - Preferred voice: "Nova" (warm, slightly British)
 - Default speaker: Kitchen HomePod
+
+### Node Capabilities
+
+- has_gpu: true
+- can_run_local_ai: true
+- local_ai_endpoint: LM-Studio `http://localhost:1234`
 ```
 
 ### Why Separate?
@@ -452,93 +484,176 @@ Notes:
 
 ## Agent File Template
 
-I focus on developing the following agent.
+I focus on developing the following distributed agent.
 
-- (executable) roe_agent, I ask the user for a custom name.
-  1. Core API 
-     - add LM Studio, OpenAI and Anthropic model provider APIs
-     - add a list of models such as `gpt-oss-20b`
+- (executable, default) roe_agent, I ask the user for a custom name
+- Architecture
+  0. Overview
+     - Multiple independent agent nodes communicate via near-realtime protocol (1-3 second lag acceptable)
+     - Nodes coordinate via gossip-style event synchronization
+     - Nodes have human readable names
+     - Any node can become temporary main if primary main is unresponsive
+     - Node Types
+       - Main, session coordinator and task execution 
+       - Worker, task execution, local AI for example Laptop with GPU
+       - IoT, sensors, delegates most tasks, for example Arduino, Pi
+       - Mobile, conditional, battery-sensitive, sensors, for example Smartphone
+  1. Core API, identical across all nodes, differs through plugins / extensions on device 
+     - Add LM Studio, OpenAI and Anthropic model provider APIs
+     - Add a list of models such as `gpt-oss-20b`
+     - Support local AI (LM-Studio) for offline execution
   2. Helper methods
      - detectFirstStart -> check if `BOOTSTRAP.md` exists and if so load it first
      - testAPIConnected -> check if the model server responds with 200 ok
      - testToolCall -> use bash pwd to show current directory
+     - getCapabilities -> read node-config.json
   3. Main agent loop 
     1. System message init
-      - On start of the agent event-loop check if the `BOOTSTRAP.md` exists.
-      - Set core system messages and load config files `SOUL.md`, `MEMORY.md`, etc. 
-      - Check for long running pending tasks.
-      - Greet the USER and wait for input.
+      - On start of the agent event-loop check if the `BOOTSTRAP.md` exists
+      - Set core system messages and load config files `SOUL.md`, `MEMORY.md` etc.
+      - Register with main node via heartbeat
+      - Sync missed events from main node 
+      - Check for long running pending tasks
+      - Greet the USER and wait for input
+      - Init node
+        - Register this node with the main node
+        - Set up node-config.json for current device
+        - Sync event history from main node
     2. Interactive loop
       - use stream: True to connect to a provider API, provide non-streaming variant as a fallback
       - use Websocket connection for streaming responses of the assistant and external connectors
-      - wait for USER input 
-      - send a tool call response back to the assistant before returning to the USER
+      - Sait for USER input 
+      - Send a tool call response back to the assistant before returning to the USER
       - ON_ERROR show the error message and send it back to the assistant
+    3. Parallel execution (delegated tasks)
+       - When task delegated from another node, create isolated execution context
+       - Execute in parallel to main loop
+       - Report result back to delegator
   4. Gateway
     - Core message gateway
-      - allows to filter all incomming and outgoing messages including tool calls
-      - include a hooks / middleware
-        - should count used IO tokens for `/stats` command by provider and model
-      - can be used to filter any IO messages to make them secure
-  5. Hot-swappable components
-    - core components
-      - deamon to allow for hot-swap and auto-restart of the main loop
-      - runtime with main loop
-      - logging via Markdown files
-        - store any messages in simple Markdown event-log files in `log/`.
-      - plugin system
-    - core components need to be hot-swappable during run-time such that the agent can update its own code while running, without the need for a restart
+      - Allows to filter all incomming and outgoing messages including tool calls
+      - Include a hooks / middleware
+        - Should count used IO tokens for `/stats` command by provider and model
+      - Can be used to filter any IO messages to make them secure
+      - Inter-node communication:
+        - heartbeat protocol ("I'm up" ping)
+        - event broadcast to all peers
+        - gossip sync on reconnect
+        - delegation request/response
+  5. System architecture
+     - Distributed Multi-Node Architecture
+       - Near-realtime communication (1-3 sec lag acceptable)
+       - Gossip-style event synchronization
+       - CRDT-like leader election (any node can become main)
+     - Unified Core Codebase
+       - Agent core is identical across ALL nodes
+       - Only platform-specific plugins differ:
+         - Native devices: modules for sensors, GPS, camera, notifications
+         - IoT devices: minimal plugins for available hardware
+         - Desktop/laptop: full feature set
+       - Core updates propagate to all nodes via event sync
+     - Event Log (per-node local storage)
+       - Each node maintains local event log (SQLite or Markdown)
+       - Events are immutable (append-only)
+       - Events include:
+         - task:delegated, task:started, task:completed, task:failed
+         - task:offline_queued, task:upvote, task:downvote
+         - message:sent, message:read, message:mute
+         - node:online, node:offline, node:heartbeat
+         - sensor:event, subscription:update, user:preferences
+       - Event ID: Lamport timestamp + node_id
+     - Capability Inference
+       - Nodes derive capabilities from task history and system sensory data
+       - Delegation engine uses this for task routing
+       - User feedback (upvote/downvote) shapes future delegation
+     - Device Ownership Model
+       - Each device has owner: device_id → user_id
+       - Users define owned devices and routing rules
+       - Shared devices available to all team members
+     - Delegation Engine (local decision)
+       - Decision factors: DeviceHealth, DeviceCapabilities, DeviceOwnership, TaskRoutingRules
+       - Possible decisions: LOCAL, DELEGATE_TO_OWNED, DELEGATE_TO_SHARED, QUEUE
+       - Delegated tasks execute in isolated parallel loop
+     - Offline Task Handling
+       - Queue tasks when user offline
+       - Try local AI (LM-Studio) if available
+       - User upvote/downvote feedback
+       - Downvote triggers reissue as NEW task (original preserved)
+     - Location-Aware Delegation
+       - IoT sensors → broadcast events
+       - Nodes check user presence
+       - Send notifications via preferred channel
+       - Signal-style read receipts
+       - Privacy: proximity/boundary checks, not coordinates
+     - Session Isolation
+       - Separate new tasks that are not part of the same conversation or USER session create a separate isolated session with a separate LLM call to allow for parallel execution
+       - User-agent: private session
+       - User-team-agent: shared context
+       - Destructive tasks require confirmation
+     - Hot-swappable core components
+       - Daemon checks main app running for hot-swap
+       - Runtime with main loop
+       - Logging via Markdown/JSONL or SQLite files 
+       - Plugin system
   6. Chat interface system commands
      - Command types 
-        - toggle command to swap state.
-        - list command to list options, features and so on.
-        - execute command to affect some state (CRUD) and return result.
+        - Toggle command to swap state
+        - List command to list options, features and so on
+        - Execute command to affect some state (CRUD) and return result
       - Core chat commands: 
-        - `/help` show available commands.
+        - `/help` show available commands
         - `/stats` detailed token usage separated by providers, models, input tokens, output tokens, user messages, errors etc.
-        - `status` system status, are agent and deamon online, which APIs and connections are active, and is agent in build mode e.g., to detect hot-swapping issues.
+        - `status` system status, are agent and deamon online, which APIs and connections are active, which nodes are online, and is agent in build mode e.g., to detect hot-swapping issues
         - `/providers` list available model API providers, switch providers via tab-select
         - `/models` list available models, switch models via tab-select
-        - `/connect` initiate provider+model connection, multi-step tab-select.
-        - `/skills` list available `skill/<skill-name>.md` files. 
+        - `/connect` initiate provider+model connection, multi-step tab-select
+        - `/nodes` list online nodes and their capabilities and status for example how many tasks are currently running on each node
+        - `/delegate` manually delegate current task to specific node
+        - `/new` start new session
+        - `/skills` list available `skill/<skill-name>.md` files
           - hardskills, tools, mcps and skills directly integrated as code
-        - `/cronjobs` list active cronjobs.
+        - `/cronjobs` list active cronjobs
         - unavailable commands should result in a `command does not exist` message
       - Core chat toggle commands (show/hide): 
         - `/debug` 
-        - `/showthinking`
+        - `/showthinking` toggle thinking display
         - `/raw`
+      - USER may type commands while waiting for the agent response, non-blocking
       - Keyboard movements:
         - tab and shift-tab for selecting
-        - linux terminal style movement commands e.g., press up,down to see chat history
+        - Linux terminal style movement commands e.g., press up,down to see chat history
   7. Message flow patterns
-      - Core abbreviations
+     - Thinking tokens supported
+     - Tool call streaming supported
+     - Parallel tool execution for delegated tasks
+     - Event broadcast to all nodes
+     - Core abbreviations
         - A: assistant
         - S: system
         - T: tool 
         - U: USER
       - UAU pattern: USER->assistant->USER
-        - Example: USER asks a simple question, assistant answers, waiting for next USER input.
+        - Example: USER asks a simple question, assistant answers, waiting for next USER input
       - UATAU pattern: USER->assistant->tool->assistant(->tool->assistant)->USER
-        - USER asking the assistant for wheather tomorrow. Complex tasks may require multiple tool->assistant calls before returning back to the USER.
+        - USER asking the assistant for wheather tomorrow. Complex tasks may require multiple tool->assistant calls before returning back to the USER
       - SU / US pattern: SYSTEM->USER / USER->SYSTEM
-        - Example: USER logon when USER starts app, logoff USER says `bye`. 
+        - Example: USER logon when USER starts app, logoff USER says `bye` or types CTRL+C
       - STAU pattern: EXTERNSYSTEM->tool->assistant-USER
-        - Example: cron command executes and passes result to main-loop-plugin results in flow: main-loop direct system call->execute_bash->assistant->USER. 
+        - Example: cron command executes and passes result to main-loop-plugin results in flow: main-loop direct system call->execute_bash->assistant->USER 
       - STAU pattern: INTERNSYSTEM->tool->assistant-USER
-        - Example: `/cronjobs` chat command  results in flow: chat command->execute_bash->assistant->USER.
-        - Example: an internal error occurs and results in flow: yield errorOrDebugMessage->assistant->USER. 
+        - Example: `/cronjobs` chat command  results in flow: chat command->execute_bash->assistant->USER
+        - Example: an internal error occurs and results in flow: yield errorOrDebugMessage->assistant->USER 
     - Note: 
       1. patterns in parentheses are optional
-      2. multiple ATA patterns are allowed, but always return tool, error or debug messages back to the assistant first, before responding to the USER.
+      2. multiple ATA patterns are allowed, but always return tool, error or debug messages back to the assistant first, before responding to the USER
       2. every step in the message flow is visible to the USER, including special tokens such as thinking tokens
     - special token highlighting
       - thinking tokens `<think>...</think> (or similar)` are distinctly formatted in the chat
       - USER may toggle `/showthinking` via chat command
   8. Plugin system
-    - core plugin connector hot-swappable
-    - load plugins via custom `/<pluginname>` toggle and execute commands from `src/plugins/`
-    - Plugins may interact with the message flow in using the hooks / middleware or by providing custom tool calls.
+    - Core plugin connector hot-swappable
+    - Load plugins via custom `/<pluginname>` toggle and execute commands from `src/plugins/`
+    - Plugins may interact with the message flow in using the hooks / middleware or by providing custom tool calls
     - Initial plugins
       - Telegram plugin:
         - Create a telegram plugin in `src/plugins/` with full bot integration (start/help/status commands, message handling, async threading)
@@ -549,10 +664,29 @@ I focus on developing the following agent.
         - `/telegram` toggles connection and shows status
         - Update `SKILLS.md` to document Telegram plugin usage
         - Add tests for Telegram plugin
-        - make sure to read and display the message sender id and or username for every message send through telegram to differentiate users in a group chat
+        - Make sure to read and display the message sender id and or username for every message send through telegram to differentiate users in a group chat
+      - Signal, WhatsApp, Slack plugins (similar pattern) 
 
 
 - Follow the official API implementations, depending on the selected model e.g., OpenAI, Anthropic and lm-studio APIs.
+
+<node-config.json-template>
+{
+  "node_id": "unique-node-id",
+  "node_type": "main|worker|iot|mobile",
+  "owner_user_id": "user_a|shared",
+  "capabilities": {
+    "has_gpu": false,
+    "can_run_local_ai": false,
+    "local_ai_endpoint": null,
+    "sensors": ["temperature", "humidity"],
+    "has_notifications": false,
+    "has_gps": false
+  },
+  "main_node_url": "http://server:18789",
+  "is_main": false
+}
+</node-config.json-template>
 
 ## Testing
 
@@ -686,6 +820,8 @@ I make sure to send the tool call back to the agent before yielding back to the 
       loadAgentSoul -> load SOUL.md,
       loadAgentTools -> load TOOLS.md
       loadAgentSkills -> load SKILLS.md
+      registerWithMainNode -> heartbeat
+      syncMissedEvents -> pull events from main
       ...
     ]
 </test-example-load-agent-state>
@@ -790,20 +926,83 @@ I also make sure streaming works with tool calling
   [DONE]
 </test-example-tool-call-stream>
 
+### Inter-Node Communication Tests
+
+<test-example-node-heartbeat>
+  Task: Node sends heartbeat to main node
+  
+  Input: {
+    "node_id": "laptop-node-001",
+    "node_type": "worker",
+    "capabilities": {
+      "has_gpu": true,
+      "can_run_local_ai": true,
+      "local_ai_endpoint": "http://localhost:1234"
+    },
+    "health": {
+      "cpu_usage": 45.2,
+      "memory_usage": 62.1,
+      "battery": 87,
+      "charging": true
+    }
+  }
+  
+  Output: JSON {
+    "status": "ok",
+    "main_node_id": "server-main-001",
+    "last_event_id": "1700000123-server-main-001",
+    "online_nodes": ["server-main-001", "laptop-node-001", "iot-weather-001"]
+  }
+</test-example-node-heartbeat>
+
+<test-example-delegation>
+  Task: Node delegates task to another node
+  
+  Input: {
+    "task_id": "task-12345",
+    "from_node": "mobile-node-001",
+    "to_node": "laptop-node-001",
+    "task_input": "Summarize the latest emails",
+    "requirements": {
+      "needs_gpu": true,
+      "can_run_local_ai": false
+    }
+  }
+  
+  Event Log Entry: {
+    "id": "1700000156-mobile-node-001",
+    "timestamp": 1700000156,
+    "node_id": "mobile-node-001",
+    "event_type": "task:delegated",
+    "payload": {
+      "task_id": "task-12345",
+      "from_node": "mobile-node-001",
+      "to_node": "laptop-node-001",
+      "task_input": "Summarize the latest emails"
+    }
+  }
+</test-example-delegation>
+
 
 ## Error Handling & Logging
 
-- I add basic error handling for network requests.
+- I add basic error handling for network requests
 - I include a simple append-log logging scheme, writing log files to `./log/<date:DD-mon-YYYY-time>.log`
+- Event log: `./log/event-YYYY-MM-DD.jsonl`
+- Node-specific logs: `./log/node-{node_id}/`
+- Handle inter-node communication errors gracefully
+- Implement retry logic for failed delegations
 
 ## Documentation
 
-- Add comments at the top of the file explaining purpose, usage and prerequisites.
+- Add comments at the top of the file explaining purpose, usage and prerequisites
+- Document node-specific configurations
+- Document inter-node protocol
 
 ## Next Steps
 
-- I ask the user the clarifying questions defined in the section at the beginning of this document.
-- create all config files and directories as defined above.
+- I ask the user the clarifying questions defined in the section at the beginning of this document
+- Create all config files and directories as defined above
 
 - I make sure to add the following initial tasks to the agents initial setup routine (detectFirstStart)
   1. I first create the `AGENTS.md` file from the `AGENTS.md-template` and the `BOOTSTRAP.md` file from the `BOOTSTRAP.md-template`, and
