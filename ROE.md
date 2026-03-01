@@ -22,13 +22,13 @@ Hi USER. Please provide the following information for me to build the agent:
 
 ## Programming Language
 
-Map each pseudocode to the USER's defined {programmingLanguage}
+Map each pseudocode to the USER defined {programmingLanguage}
 
 ## Built-in Tools
 
 I create the following tools.
 
-- execute_bash(cmd)
+- execute_bash(cmd) - Execute shell commands with timeout and error handling
 
 ### System Commands (Called via bash)
 
@@ -60,6 +60,8 @@ I create these directories:
 - `src/plugins/`, to store plugin modules
 - `log/`, to store log files
 - `doc/`, to document the agent and its internal and external API
+- `memory/`, to store recent context (YYYY-MM-DD.md format)
+- `raw-memory/`, to store raw media files (audio, images, videos, documents)
 
 Next, I create the following core config files:
 
@@ -688,6 +690,305 @@ I focus on developing the following distributed agent.
 }
 </node-config.json-template>
 
+
+### Configuration and Model Selection
+
+The agent supports multiple local models through LM Studio or similar local inference servers.
+
+**Example Configuration:**
+```
+Agent Name: "roe_agent"
+Workspace: "./"
+
+Local API Endpoint (LM Studio): http://localhost:1234/v1/chat/completions
+API Type: OpenAI Compatible
+
+Available Models:
+  1. qwen/qwen3.5-35b-a3b  (has vision capabilities)
+  2. openai/gpt-oss-20b    (default)
+
+Current Model: qwen/qwen3.5-35b-a3b
+Thinking Mode: OFF (instruct mode by default)
+Debug Mode: OFF
+```
+
+### Media Type Directories
+
+Media files are organized by type and are **stored indefinitely** - they are permanent assets.
+
+**Directory Structure:**
+```
+raw-memory/
+├── audio/      # Voice messages
+├── images/     # Photos and images
+├── videos/     # Video files
+└── documents/  # PDF, documents, etc.
+```
+
+### First-Run BOOTSTRAP.md Detection
+
+The agent MUST check for BOOTSTRAP.md on every startup to determine if first-run setup is needed.
+
+**Example Flow:**
+```
+Startup:
+  1. Check if BOOTSTRAP.md exists and we are not in TEST mode → YES
+  2. Check if log/bootstrap.json exists → NO
+  3. Result: First run needed → Enter bootstrap mode
+```
+### Tool Call Handling
+
+The complete tool call flow with proper message sequencing. Tools are called AFTER the initial assistant response, then the results are fed back to get the final response.
+
+**Example Flow:**
+```
+User: "Show me the contents of SOUL.md"
+Agent: [calls execute_bash tool]
+Tool Output: [returns file contents]
+Agent: [receives tool output, generates final response]
+"The SOUL.md file contains: '# SOUL.md Template...'"
+```
+
+### Debug Mode Control
+
+User-controllable debug output for troubleshooting.
+
+**Example:**
+```
+User: /debug
+Agent: Debug mode: ON
+[All subsequent operations show verbose logging]
+
+User: /debug
+Agent: Debug mode: OFF
+```
+
+### Model Provider API Call Structure
+
+The agent supports multiple API formats: OpenAI-compatible, LM Studio native and Anthropic-compatible.
+
+**OpenAI-Compatible Format (Most Common):**
+```
+Endpoint: http://localhost:1234/v1/chat/completions
+Timeout: 1200 seconds (20 minutes for local models)
+
+Request:
+{
+  "model": "qwen/qwen3.5-35b-a3b",
+  "messages": [
+    {"role": "system", "content": "You are helpful."},
+    {"role": "user", "content": "Hello"}
+  ],
+  "stream": false,
+  "temperature": 0.7,
+  "extra_body": {
+    "chat_template_kwargs": {"enable_thinking": false}
+  }
+}
+```
+
+<example-openai-compatible-api>
+Endpoint: http://localhost:1234/v1/chat/completions
+Request: {
+  "model": "qwen/qwen3.5-35b-a3b",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Hello"}
+  ],
+  "stream": false,
+  "temperature": 0.7,
+  "extra_body": {
+    "chat_template_kwargs": {"enable_thinking": false}
+  }
+}
+Response: {
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Hello! How can I help you today?"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 20,
+    "total_tokens": 30
+  }
+}
+</example-openai-compatible-api>
+
+<example-lm-studio-native-compatible-api>
+Request: {
+  "model": "qwen/qwen3.5-35b-a3b",
+  "input": "Hello",
+  "system_prompt": "You are a helpful assistant.",
+  "stream": false,
+  "temperature": 0.7
+}
+
+Response (SSE format):
+  event: message.delta
+  data: {"content": "Hello"}
+
+  event: message.delta
+  data: {"content": "!"}
+
+  event: done
+  data: null
+</example-lm-studio-native-compatible-api>
+
+</example-anthropic-compatible-api>
+Request: curl https://api.anthropic.com/v1/messages \
+    -H 'Content-Type: application/json' \
+    -H 'anthropic-version: 2023-06-01' \
+    -H "X-Api-Key: $ANTHROPIC_API_KEY" \
+    --max-time 600 \
+    -d '{
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Hello, world",
+              "role": "user"
+            }
+          ],
+          "model": "claude-opus-4-6"
+        }'
+Response: {
+    "id": "msg_013Zva2CMHLNnXjNJJKqJ2EF",
+    "container": {
+      "id": "id",
+      "expires_at": "2019-12-27T18:11:19.117Z"
+    },
+    "content": [
+      {
+        "citations": [
+          {
+            "cited_text": "cited_text",
+            "document_index": 0,
+            "document_title": "document_title",
+            "end_char_index": 0,
+            "file_id": "file_id",
+            "start_char_index": 0,
+            "type": "char_location"
+          }
+        ],
+        "text": "Hi! My name is Claude.",
+        "type": "text"
+      }
+    ],
+    "model": "claude-opus-4-6",
+    "role": "assistant",
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 2051,
+      "cache_read_input_tokens": 2051,
+      "inference_geo": "inference_geo",
+      "input_tokens": 2095,
+      "output_tokens": 503,
+      "server_tool_use": {
+        "web_fetch_requests": 2,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard"
+    }
+  }
+</example-anthropic-compatible-api>
+
+
+#### Vision/Multi-Modal Message Format
+
+**Critical:** For vision models, the image MUST come BEFORE text in the content array.
+
+**Correct Format:**
+```
+{
+  "role": "user",
+  "content": [
+    {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}},
+    {"type": "text", "text": "What do you see in this image?"}
+  ]
+}
+```
+
+<example-openai-compatible-api-request-text>
+Endpoint: http://localhost:1234/v1/chat/completions
+Input: {
+  "model": "qwen/qwen3.5-35b-a3b",
+  "messages": [
+    {"role": "user", "content": [
+      {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQ..."}},
+      {"type": "text", "text": "What do you see?"}
+    ]}
+  ],
+  "stream": false,
+  "temperature": 0.7
+}
+Response: { ... }
+</example-openai-compatible-api-request-text>
+
+
+### Telegram Bot Integration
+
+Complete message handling for Telegram plugin with group chat support.
+
+**Group Chat Rules:**
+- **Text messages:** Only respond if @mentioned
+- **Media (photo, voice, video, documents):** Always respond, even without @mention
+
+**Example:**
+```
+Group chat:
+  User A: "Hey everyone, how's it going?"  → IGNORE (no mention)
+  User B: "@ada what is 2+2?"              → RESPOND
+  User C: [sends photo]                    → RESPOND (media always)
+  User D: [sends voice message]            → RESPOND (media always)
+```
+
+### Voice Transcription
+
+Voice messages are transcribed using voxtype. The original audio stored in `raw_memory/audio/`.
+
+**Example:**
+```
+Voice message received
+  ↓
+Download to raw-memory/audio/20260301_123456_abc123.ogg
+  ↓
+Convert to WAV (16kHz mono) via ffmpeg
+  ↓
+Transcribe with voxtype
+  ↓
+Return: "[Voice message]: Can you help me with..."
+```
+
+### Model Switching Command
+
+Like all chat commands, `/model` supports autocomplete of available models.
+
+**Example:**
+```
+User: /model <modelname>
+Agent: Available models:
+  1. [x] qwen/qwen3.5-35b-a3b
+  2. [ ] openai/gpt-oss-20b
+  3. [ ] meta-llama/Llama-3.3-70B-Instruct
+  
+  Current: qwen/qwen3.5-35b-a3b
+  Use /model <number> to switch
+
+User: /model 2
+Agent: Switched to: openai/gpt-oss-20b
+```
+
+
 ## Testing
 
 - Test actual implementation, do not duplicate logic into tests
@@ -883,7 +1184,8 @@ Next, I make sure streaming works
 I also make sure streaming works with tool calling
 
 <test-example-tool-call-stream>
-  Provider API: lm-studio
+  Provider API: lm-studio OpenAI-compatible
+  Tool execution timeout: 300 seconds for local models
   Input JSON: {
       "model": "openai/gpt-oss-20b",
       "messages": [
@@ -957,7 +1259,7 @@ I also make sure streaming works with tool calling
 
 <test-example-delegation>
   Task: Node delegates task to another node
-  
+
   Input: {
     "task_id": "task-12345",
     "from_node": "mobile-node-001",
@@ -982,6 +1284,80 @@ I also make sure streaming works with tool calling
     }
   }
 </test-example-delegation>
+
+### Workflow Tests
+
+<test-first-run-detection>
+    Setup: Create BOOTSTRAP.md, ensure log/bootstrap.json doesn't exist
+    Action: Start agent
+    Expected: Agent enters bootstrap mode, guides user through setup
+    Verify: log/bootstrap.json created after completion, BOOTSTRAP.md renamed
+</test-first-run-detection>
+
+<test-tool-call-flow>
+    Setup: Normal operation mode
+    Input: "Show me the contents of SOUL.md"
+    Expected Flow:
+        1. Assistant calls execute_bash tool
+        2. Tool output displayed to user
+        3. Assistant provides response interpreting the output
+    Verify: Complete conversation with tool results in message history
+</test-tool-call-flow>
+
+<test-memory-persistence>
+    Setup: Have conversation with agent
+    Action: Exchange several messages
+    Verify: 
+        - `memory/YYYY-MM-DD.md` contains conversation log
+        - Key preferences saved to MEMORY.md
+        - Next session loads previous memories
+</test-memory-persistence>
+
+<test-vision-model>
+    Setup: Vision model loaded (e.g., qwen/qwen3.5-35b-a3b)
+    Input: Send image to bot
+    Expected:
+        1. Image downloaded to raw-memory/images/
+        2. Vision request sent to model
+        3. Model describes image
+    Verify: Response includes image description
+</test-vision-model>
+
+<test-media-separation>
+    Setup: Agent running
+    Input: Send voice, photo, video, document to bot
+    Expected:
+        - Voice saved to raw-memory/audio/
+        - Photo saved to raw-memory/images/
+        - Video saved to raw-memory/videos/
+        - Document saved to raw-memory/documents/
+    Verify: Files exist in correct directories and are stored indefinitely
+</test-media-separation>
+
+<test-group-media>
+    Setup: Bot in group chat
+    Input: Send media (no @mention) to group
+    Expected: Bot responds to media even without @mention
+    Verify: Response generated for photo, voice, video, document
+</test-group-media>
+
+<test-model-switching>
+    Setup: Multiple models available
+    Action: Use /model command to switch
+    Expected: Subsequent requests use new model
+    Verify: Model name in API calls changes
+</test-model-switching>
+
+<test-instruct-thinking-mode-switching>
+    Setup: Model with instruct and thinking mode loaded (e.g., Qwen)
+    Action: Use /thinkmode command to toggle
+    Expected: 
+        - Thinking mode disabled by default
+        - Can enable with /thinkmode
+    Verify: API calls include correct extra_body parameter
+    Caution: /thinkmode changes the model's internal thinking behavior; /think only alters how thinking tokens are shown in the UI
+</test-instruct-thinking-mode-switching>
+
 
 
 ## Error Handling & Logging
