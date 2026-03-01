@@ -39,17 +39,21 @@ Be transparent about your PRs.
 
 We are currently prioritizing:
 
-- v0.1
-  - Getting AI coding assistants to generate the core CLI in at least two different programming languages.
-- v0.2 to v0.9
-  - Getting Whatsapp, Telegram and Signal connectors to work.
-  - Getting reliable API calling.
-  - Reaching compatability with OpenClaw skills.
-  - Building successfully for at least 10 programming languages.
-- v1.0 
-  - Raising your agent reliably with OpenCode, Codex, Claude considering current top AI models in under 5 prompts.
+- **v0.1.0** 
+  - AI coding assistants generate the core CLI in at least two programming languages.
+  - Support a Telegram plugin.
+  - Support multimedia capabilities in chat messages.
+- **v0.2.0 to v0.x.x** (subject to community feedback)
+  - Support other connectors such as Whatsapp, Signal, Google Docs.  
+  - Enable reliable API calling for providers such as OpenAI, Anthropic and LM-Studio.
+  - Achieve compatibility with OpenClaw skills.
+  - Build successfully for at least 10 programming languages
+- **v1.0.0** and beyond (subject to community feedback)
+  - Raising your agent reliably with OpenCode, Codex, Claude using current top AI models in under 5 prompts.
   - Improving performance and compacting context during the growth step.
-  
+
+Have an idea for a new feature? Start a discussion on GitHub — we’d love your input!
+
 ## Report a Vulnerability
 
 Please report any security vulnerabilities with to this repo directly.
