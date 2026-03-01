@@ -49,7 +49,7 @@ We raise our own creature in this tutorial using an AI coding assistant ([OpenCo
    ```
 4. Let the AI assistant help you raise ROE.md by typing:
    ```text
-   Help me raise my personal agent by following the parenting steps in `./ROE.md` file exactly.
+   Help me raise my personal agent by following the parenting steps in `./ROE.md` file exactly. Please ask clarifying questions before you start building.
    ```
    into the assistant's chat window.
 5. Your AI assistant should now read the `ROE.md` file and ask you to answer some initial questions, such as 
@@ -91,44 +91,59 @@ If everything works as expected, great you are done and your personal AI assista
 If you like to share your personal agent with the community or you experimented on how to improve the `ROE.md` file and want to share your results, please read [how to contribute](#contribute). 
 
 
-## Features
+## Features (Pre-Release)
+
+> [!CAUTION]
+> This project is pre-release. Features marked as “In Development” work on `main` but may change. Planned features may depend on user feedback or evolving priorities.  
 
 Features that should work out of the box, once your agent is created.
 
-| Features | From    | Status | Note |
-| -------- | ------- | ------ | ----- |
-| CLI      | v0.1    | ✅     | integrated |
-| GMail    | v0.3    | ⬜     | via Skill, planned |
-| Signal   | v0.2    | ⬜     | via Skill, planned |
-| Telegram | v0.2    | ⬜     | via Skill, planned |
-| Voice    | v0.3    | ⬜     | via Skill, planned |
-| Whatsapp | v0.2    | ⬜     | via Skill, planned |
-| *secret* | v0.8    | ⬜     | *secret*, planned  |
+| Features | Lifecycle         | Availability | Note |
+| -------- | ----------------- | ------ | ----- |
+| CLI      | 🟡 In Development | ✅ Works today | integrated |
+| GMail    | ⬜ Planned        | —      | via Skill, planned |
+| Signal   | ⬜ Planned        | —      | via Skill, planned |
+| Telegram | 🟡 In Development | ✅ Works today  | Plugin |
+| Whatsapp | ⬜ Planned        | —      | via Skill, planned |
+| *secret* | ⬜ Planned        | —      | *secret*, planned  |
 
-Integrated provider APIs
+### Chat Multimedia Capabilities
 
-| Features  | From    | Status | Note  |
-| --------- | ------- | ------ | ----- |
-| Anthropic | v0.12   | ⬜     | 🚧 |
-| llama.cpp | v0.2    | ⬜     | planned | 
-| LM Studio | v0.1    | ✅     | integrated |
-| OpenAI    | v0.12   | ⬜     | 🚧 |
-| Ollama    | v0.6    | ⬜     | planned |
+| Capability    | Lifecycle    | Availability | Note |
+| ------------- | ------------ | ------ | ----- |
+| Documents     | ⬜ Planned   | — | PDF, CSV ingestion |
+| Image (OCR)   | 🟡 In Development | ✅ Works today | Depends on a model that provides vision capabilities |
+| Voice (STT)   | 🟡 In Development | ✅ Works today | Depends on Voxtype + FFMPEG (API may change) |
+| Voice (TTS)   | ⬜ Planned    | — | — |
 
 
-ROE.md supports the standard _OpenClaw-like_ templates
+### Integrated Provider APIs
 
-| Templates    | From    | Status | 
+| Provider  | Lifecycle         | Availability    | Note  |
+| --------- | ----------------- | --------------- | ----- |
+| Anthropic | 🟡 In Development | ✅ Works today  | Partial |
+| llama.cpp | ⬜ Planned        | — | Depends on community feedback | 
+| LM Studio | 🟡 In Development | ✅ Works today  | Partial |
+| OpenAI    | 🟡 In Development | ✅ Works today  | Partial |
+| Ollama    | ❓ Under review   | — | No commitment yet |
+
+
+### OpenClaw-style templates
+
+ROE.md supports standard _OpenClaw-style_ templates, 
+and you’re welcome to bring your own as well.
+
+| Templates    | From    | Availability | 
 | ------------ | ------- | ------ |
-| AGENTS.md    | v0.1    | ✅ |
-| BOOTSTRAP.md | v0.1    | ✅ |
-| HEARTBEAT.md | v0.1    | ✅ |
-| IDENTITY.md  | v0.1    | ✅ |
-| MEMORY.md    | v0.1    | ✅ |
-| SKILLS.md    | v0.1    | ✅ |
-| SOUL.md      | v0.1    | ✅ |
-| TOOLS.md     | v0.1    | ✅ |
-| USER.md      | v0.1    | ✅ |
+| AGENTS.md    | 🟡 In Development | ✅ Works today |
+| BOOTSTRAP.md | 🟡 In Development | ✅ Works today |
+| HEARTBEAT.md | 🟡 In Development | ✅ Works today |
+| IDENTITY.md  | 🟡 In Development | ✅ Works today |
+| MEMORY.md    | 🟡 In Development | ✅ Works today |
+| SKILLS.md    | 🟡 In Development | ✅ Works today |
+| SOUL.md      | 🟡 In Development | ✅ Works today |
+| TOOLS.md     | 🟡 In Development | ✅ Works today |
+| USER.md      | 🟡 In Development | ✅ Works today |
 
 
 For AI model compatability refer to the [tests and benchmarks](#tests-and-benchmarks) section.
@@ -143,15 +158,16 @@ We test how some AI assistants perform at raising our custom agent executable fr
 
 **OpenCode**:
 
-| Language   | `ROE.md` Version | AI Assistant | Provider     | Builds in >5 Prompts, >100k Context |  Kimi-2.5 | OpenAI | Anthropic | Z.ai | 
-|----------|------------------|--------------|---------------|----------------------| :---------: | :------: |:--------:|:------:|
-| Bash/shell | ROE-v0.1.md      | Opencode     | OpenCode Zen | ❌                   | ❌        | ⬜     | ⬜        | ⬜   | 
-| Go         | ROE-v0.1.md      | Opencode     | OpenCode Zen | ❌                   | ❌        | ⬜     | ⬜        | ⬜   | 
-| JavaScript | ROE-v0.1.md      | Opencode     | OpenCode Zen | ❌                   | ❌        | ⬜     | ⬜        | ⬜   | 
-| Python     | ROE-v0.1.md      | Opencode     | OpenCode Zen | ✅                   | ✅        | ⬜     | ⬜        | ⬜   | 
-| Ruby       | ROE-v0.1.md      | Opencode     | OpenCode Zen | ❌                   | ❌        | ⬜     | ⬜        | ⬜   | 
-| Rust       | ROE-v0.1.md      | Opencode     | OpenCode Zen | ⬜                   | ⬜        | ⬜     | ⬜        | ⬜   | 
-| Zig        | ROE-v0.1.md      | Opencode     | OpenCode Zen | ⬜                   | ⬜        | ⬜     | ⬜        | ⬜   | 
+| Language   | AI Assistant | Provider     | Builds in >5 Prompts, >100k Context     |  Kimi-2.5 | OpenAI | Anthropic | Z.ai | MinMax2.5 |
+|------------|--------------|--------------|-----------------------------------------|:---------:|:------:|:---------:|:----:|:---------:|
+| Bash/shell | Opencode     | OpenCode Zen | ❌                                      | ❌        | ⬜     | ⬜        | ⬜   | ⬜        |
+| Go         | Opencode     | OpenCode Zen | ❌                                      | ❌        | ⬜     | ⬜        | ⬜   | ⬜        |
+| JavaScript | Opencode     | OpenCode Zen | ❌                                      | ❌        | ⬜     | ⬜        | ⬜   | ⬜        |
+| Python     | Opencode     | OpenCode Zen | ✅                                      | ✅        | ✅     | ⬜        | ⬜   | ⬜        |
+|   ↳        | Codex        | OpenAI       | ✅                                      | ✅        | ✅     | ⬜        | ⬜   | ✅        |
+| Ruby       | Opencode     | OpenCode Zen | ❌                                      | ❌        | ⬜     | ⬜        | ⬜   | ⬜        |
+| Rust       | Opencode     | OpenCode Zen | ⬜                                      | ⬜        | ⬜     | ⬜        | ⬜   | ⬜        |
+| Zig        | Opencode     | OpenCode Zen | ⬜                                      | ⬜        | ⬜     | ⬜        | ⬜   | ⬜        |
 > Legend: Untested ⬜, Build failed ❌, Build passed ✅, Under active development 🚧
 
 
@@ -159,9 +175,9 @@ We also test recent "cheap" local models as our goal is to give everyone a chanc
 
 **Local AI Assistants**:
 
-| Language | `ROE.md` Version | AI Assistant | Provider     | Builds in >10 Prompts, >100k Context |  GPT-OSS-20b | GLM-4.7 | Devstral-30b | Z.ai | 
-|----------|------------------|--------------|---------------|----------------------| :---------: | :------: |:--------:|:------:|
-| Python   | ROE-v0.1.md      | OpenCode     | LM Studio | 🚧                   | ⬜        | ⬜     | ⬜        | ⬜   | 
+| Language | AI Assistant | Provider  | Builds in >10 Prompts, >100k Context |  GPT-OSS-20b | GLM-4.7 | Qwen3.5-35b-a3b |  
+|----------|--------------|-----------|--------------------------------------|:-------------:|:------------:|:---------:|
+| Python   | OpenCode     | LM Studio | 🚧                                   | ⬜            | ❌           | ⬜        | 
 > Legend: Untested ⬜, Build failed ❌, Build passed ✅, Under active development 🚧
 
 More tests comming soon.
